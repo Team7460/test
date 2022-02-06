@@ -91,7 +91,7 @@ public class Robot extends TimedRobot {
   //   thruPutHi.set(-righttrig);
 
      if(joe.getRightBumper()) thruPutHi.set(-0.6);
-     if(!joe.getRightBumper()) thruPutHi.set(0);
+     if(!joe.getRightBumper()) thruPutHi.set(0); 
      if(joe.getLeftBumper()) thruPutLow.set(0.6);
      if(!joe.getLeftBumper()) thruPutLow.set(0);    
 
