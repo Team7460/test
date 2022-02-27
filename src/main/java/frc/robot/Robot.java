@@ -14,6 +14,8 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
+import edu.wpi.first.wpilibj.Compressor;
+import edu.wpi.first.wpilibj.PneumaticsModuleType;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.ctre.phoenix.motorcontrol.can.VictorSPX;
@@ -22,6 +24,7 @@ import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
+
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -33,6 +36,11 @@ import com.revrobotics.CANSparkMaxLowLevel.MotorType;
  * directory.
  */
 public class Robot extends TimedRobot {
+  Compressor Compressor = new Compressor(0, PneumaticsModuleType.CTREPCM);
+ 
+  
+  boolean enabled = Compressor.enabled();
+  boolean pressureSwitch = Compressor.getPressureSwitchValue();
   // private final CANSparkMax m_leftDrive = new CANSparkMax(0);
   private CANSparkMax brmotor = new CANSparkMax(5, MotorType.kBrushless);
   private CANSparkMax blmotor = new CANSparkMax(1, MotorType.kBrushless);
@@ -42,6 +50,7 @@ public class Robot extends TimedRobot {
   private VictorSPX intake = new VictorSPX(6);
   private TalonSRX thruPutHi = new TalonSRX(8);
   private CANSparkMax shooter = new CANSparkMax(4, MotorType.kBrushless);
+  private VictorSPX yeet = new VictorSPX(9);
 
   private final XboxController joe = new XboxController(1);
   private final Timer m_timer = new Timer();
@@ -63,6 +72,8 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
+    Compressor.enableDigital();
+   Compressor.enabled();
     // We need to invert one side of the drivetrain so that positive voltages
     // result in both sides moving forward. Depending on how your robot's
     // gearbox is constructed, you might have to invert the left side instead.
@@ -103,19 +114,19 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     
-   final double DeadZone = .15;
+   final double DeadZone = 0.05;
 
-    double xs = joe.getLeftX();
-    double ys = joe.getLeftY();
-    double zr = joe.getRightX();
+    double xs = joe.getLeftX()/2;
+    double ys = joe.getLeftY()/2;
+    double zr = joe.getRightX()/2;
 
-    if(absl(xs)< DeadZone){
-      xs = 0.0;
-    }
-    if(absl(ys)<DeadZone){ys=0.0;}
+   // if(absl(xs)< DeadZone){
+    //  xs = 0.0;
+  // }
+   // if(absl(ys)<DeadZone){ys=0.0;}
 
-    if(absl(zr)<DeadZone){zr=0.0;}
-    m_drive.driveCartesian(ys, xs, zr);
+   // if(absl(zr)<DeadZone){zr=0.0;}
+    m_drive.driveCartesian(-ys, xs, zr);
     //  m_drive.driveCartesian(ySpeed, xSpeed, zRotation);
         
     distanceEntry.setDouble(ultrasonicLow.get());
@@ -133,11 +144,11 @@ public class Robot extends TimedRobot {
       thruPutLow.set(ControlMode.PercentOutput, -0.4);
     if (!joe.getLeftBumper())
       thruPutLow.set(ControlMode.PercentOutput, 0.0);
-
+if(joe.getYButton()) thruPutLow.set(ControlMode.PercentOutput, 0.4);
     if (joe.getAButton())
       shooter.set(-1);
-    if (joe.getYButton())
-      shooter.set(-.80);
+   // if (joe.getYButton())
+  //    shooter.set(-.80);
     if (joe.getXButton())
       shooter.set(0);
     if(joe.getBButton()){
@@ -147,6 +158,7 @@ public class Robot extends TimedRobot {
       intake.set(ControlMode.PercentOutput, 0.0);
     }
 
+    yeet.set(ControlMode.PercentOutput, joe.getLeftTriggerAxis()-joe.getRightTriggerAxis());
   }
 
   /** This function is called once each time the robot enters test mode. */
@@ -159,9 +171,7 @@ public class Robot extends TimedRobot {
   @Override
   public void testPeriodic() {
     // m_drive.driveCartesian(m_stick.getY(), m_stick.getZ(), m_stick.getX());
-    brmotor.set(.1);
-    blmotor.set(.1);
-    flmotor.set(.1);
-    frmotor.set(.1);
+    yeet.set(ControlMode.PercentOutput, joe.getLeftTriggerAxis()-joe.getRightTriggerAxis());
+
   }
 }
