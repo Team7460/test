@@ -52,7 +52,8 @@ public class Robot extends TimedRobot {
   private CANSparkMax shooter = new CANSparkMax(4, MotorType.kBrushless);
   private VictorSPX yeet = new VictorSPX(9);
 
-  private final XboxController joe = new XboxController(1);
+  private final XboxController driverController = new XboxController(0);
+  private final XboxController mechController = new XboxController(1);
   private final Timer m_timer = new Timer();
   private MecanumDrive m_drive = new MecanumDrive(flmotor, blmotor, frmotor, brmotor);
 
@@ -103,62 +104,63 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during teleoperated mode. */
 
   public double absl(double in){
-    if(in < 0.0){
-      return -in;
-    }
-    else{
-      return in;
-    }
+    if(in < 0.0){ return -in;}
+    else{return in;}
   }
 
   @Override
   public void teleopPeriodic() {
-    
-   final double DeadZone = 0.05;
+    final double DeadZone = 0.02;
 
-    double xs = joe.getLeftX()/2;
-    double ys = joe.getLeftY()/2;
-    double zr = joe.getRightX()/2;
+    double xs = driverController.getLeftX();
+    double ys = driverController.getLeftY();
+    double zr = driverController.getRightX();
+    //sets output to zero if inside the deadzone
+    if(absl(xs)< DeadZone){xs = 0.0;}
+    if(absl(ys)< DeadZone){ys = 0.0;}
+    if(absl(zr)< DeadZone){zr = 0.0;}
 
-   // if(absl(xs)< DeadZone){
-    //  xs = 0.0;
-  // }
-   // if(absl(ys)<DeadZone){ys=0.0;}
-
-   // if(absl(zr)<DeadZone){zr=0.0;}
+    //set precision driving - slows down robot to make fine movement easier
+    double precision = 1.5;
+    if(driverController.getRightBumper()){
+      xs = xs/precision;
+      ys = ys/precision;
+      zr = zr/precision;
+    }
+    //ys is flipped because its output from the controller is backwards
     m_drive.driveCartesian(-ys, xs, zr);
     //  m_drive.driveCartesian(ySpeed, xSpeed, zRotation);
         
     distanceEntry.setDouble(ultrasonicLow.get());
-    leftrig = joe.getLeftTriggerAxis();
-    righttrig = joe.getRightTriggerAxis();
+    leftrig = mechController.getLeftTriggerAxis();
+    righttrig = mechController.getRightTriggerAxis();
 
     // thruPutLow.set(leftrig);
 
     // thruPutHi.set(-righttrig);
-    if (joe.getRightBumper())
+    if (mechController.getRightBumper())
       thruPutHi.set(ControlMode.PercentOutput, 0.4);
-    if (!joe.getRightBumper())
+    if (!mechController.getRightBumper())
       thruPutHi.set(ControlMode.PercentOutput, 0.0);
-    if (joe.getLeftBumper())
+    if (mechController.getLeftBumper())
       thruPutLow.set(ControlMode.PercentOutput, -0.4);
-    if (!joe.getLeftBumper())
+    if (!mechController.getLeftBumper())
       thruPutLow.set(ControlMode.PercentOutput, 0.0);
-if(joe.getYButton()) thruPutLow.set(ControlMode.PercentOutput, 0.4);
-    if (joe.getAButton())
+if(mechController.getYButton()) thruPutLow.set(ControlMode.PercentOutput, 0.4);
+    if (mechController.getAButton())
       shooter.set(-1);
-   // if (joe.getYButton())
+   // if (mechController.getYButton())
   //    shooter.set(-.80);
-    if (joe.getXButton())
+    if (mechController.getXButton())
       shooter.set(0);
-    if(joe.getBButton()){
+    if(mechController.getBButton()){
       intake.set(ControlMode.PercentOutput, -.5);
     }
     else{
       intake.set(ControlMode.PercentOutput, 0.0);
     }
 
-    yeet.set(ControlMode.PercentOutput, joe.getLeftTriggerAxis()-joe.getRightTriggerAxis());
+    yeet.set(ControlMode.PercentOutput,leftrig-righttrig);
   }
 
   /** This function is called once each time the robot enters test mode. */
@@ -171,7 +173,7 @@ if(joe.getYButton()) thruPutLow.set(ControlMode.PercentOutput, 0.4);
   @Override
   public void testPeriodic() {
     // m_drive.driveCartesian(m_stick.getY(), m_stick.getZ(), m_stick.getX());
-    yeet.set(ControlMode.PercentOutput, joe.getLeftTriggerAxis()-joe.getRightTriggerAxis());
+    yeet.set(ControlMode.PercentOutput, mechController.getLeftTriggerAxis()-mechController.getRightTriggerAxis());
 
   }
 }
