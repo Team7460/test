@@ -60,6 +60,7 @@ public class Robot extends TimedRobot {
   DoubleSolenoid upSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM, 0, 1);
   DoubleSolenoid sideSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM, 2, 3);
   private final XboxController joe = new XboxController(1);
+  private final controller2 = new XboxController(0);
   private final Timer m_timer = new Timer();
   private MecanumDrive m_drive = new MecanumDrive(flmotor, blmotor, frmotor, brmotor);
 
@@ -202,28 +203,19 @@ public class Robot extends TimedRobot {
       intake.set(ControlMode.PercentOutput, 0.0);
       intake2.set(ControlMode.PercentOutput,0.0);
     }
-    if(joe.getLeftBumperPressed()){
-       boolean upFired = false;
-      if(upFired){
-        upSolenoid.set(Value.kForward);
-        upFired = true;
-      }
-      else{
+      if(controller2.getYButton()){
+          upSolenoid.set(Value.kForward);
+        }
+      if(controller2.getAButton()){
         upSolenoid.set(Value.kReverse);
-        upFired = false;
       }
-      if(joe.getRightBumperPressed()){
-        boolean sideFired = false;
-       if(sideFired){
+    if(controller2.getXButton()){
         sideSolenoid.set(Value.kForward);
-         sideFired = true;
-       }
-       else{
-         sideSolenoid.set(Value.kReverse);
-         sideFired = false;
-       }
       }
+    if(controller2.getBButton()){
+      sideSolenoid.set(Value.kReverse);
     }
+
     intakeLift.set(ControlMode.PercentOutput, joe.getLeftTriggerAxis() - joe.getRightTriggerAxis());
   }
 
