@@ -6,17 +6,17 @@ package frc.robot;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.networktables.NetworkTableEntry;
-import edu.wpi.first.wpilibj.AnalogInput;
-import edu.wpi.first.wpilibj.AnalogPotentiometer;
+//import edu.wpi.first.networktables.NetworkTableEntry;
+//import edu.wpi.first.wpilibj.AnalogInput;
+//import edu.wpi.first.wpilibj.AnalogPotentiometer;
 
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
-import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
-import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
+//import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+//import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.PneumaticsModuleType;
@@ -28,7 +28,7 @@ import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
-
+//import static edu.wpi.first.wpilibj.DoubleSolenoid.value.*;
 //import org.photonvision.PhotonCamera;
 //import org.photonvision.PhotonUtils;
 
@@ -57,10 +57,10 @@ public class Robot extends TimedRobot {
   private CANSparkMax shooter = new CANSparkMax(4, MotorType.kBrushless);
   private VictorSPX intakeLift = new VictorSPX(10);
 
-  DoubleSolenoid upSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM, 0, 1);
-  DoubleSolenoid sideSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM, 2, 3);
+  DoubleSolenoid upSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM, 2, 3);
+  DoubleSolenoid sideSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM, 0, 1);
   private final XboxController joe = new XboxController(1);
-  private final controller2 = new XboxController(0);
+  private final XboxController controller2 = new XboxController(0);
   private final Timer m_timer = new Timer();
   private MecanumDrive m_drive = new MecanumDrive(flmotor, blmotor, frmotor, brmotor);
 
@@ -130,10 +130,10 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopPeriodic() {
-    double forwardSpeed;
-    double rotationSpeed;
+  //  double forwardSpeed;
+    //double rotationSpeed;
 
-    final double DeadZone = 0.05;
+  //  final double DeadZone = 0.05;
 
     double xs = joe.getLeftX() / 2;
     double ys = joe.getLeftY() / 2;
@@ -202,17 +202,21 @@ public class Robot extends TimedRobot {
     } else {
       intake.set(ControlMode.PercentOutput, 0.0);
       intake2.set(ControlMode.PercentOutput,0.0);
-    }
+    } 
       if(controller2.getYButton()){
+        System.out.println("Going up");
           upSolenoid.set(Value.kForward);
         }
       if(controller2.getAButton()){
+        System.out.println("Going down");
         upSolenoid.set(Value.kReverse);
       }
     if(controller2.getXButton()){
+      System.out.println("side on");      
         sideSolenoid.set(Value.kForward);
       }
     if(controller2.getBButton()){
+      System.out.println("side off");
       sideSolenoid.set(Value.kReverse);
     }
 
