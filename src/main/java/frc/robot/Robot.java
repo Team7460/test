@@ -9,7 +9,7 @@ import edu.wpi.first.math.util.Units;
 //import edu.wpi.first.networktables.NetworkTableEntry;
 //import edu.wpi.first.wpilibj.AnalogInput;
 //import edu.wpi.first.wpilibj.AnalogPotentiometer;
-
+import edu.wpi.first.util.net.PortForwarder;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
@@ -48,8 +48,8 @@ public class Robot extends TimedRobot {
   boolean pressureSwitch = Compressor.getPressureSwitchValue();
   // private final CANSparkMax m_leftDrive = new CANSparkMax(0);
   private CANSparkMax brmotor = new CANSparkMax(3, MotorType.kBrushless);
-  private CANSparkMax blmotor = new CANSparkMax(2, MotorType.kBrushless);
-  private CANSparkMax frmotor = new CANSparkMax(5, MotorType.kBrushless);
+  private CANSparkMax blmotor = new CANSparkMax(5, MotorType.kBrushless);
+  private CANSparkMax frmotor = new CANSparkMax(2, MotorType.kBrushless);
   private CANSparkMax flmotor = new CANSparkMax(1, MotorType.kBrushless);
   private VictorSPX intake = new VictorSPX(6);
   private TalonSRX intake2 = new TalonSRX(8);
@@ -64,7 +64,7 @@ public class Robot extends TimedRobot {
   private final Timer m_timer = new Timer();
   private MecanumDrive m_drive = new MecanumDrive(flmotor, blmotor, frmotor, brmotor);
 
- // private PhotonCamera camera = new PhotonCamera("photonvision");
+  // private PhotonCamera camera = new PhotonCamera("photonvision");
 
   double leftrig = 0;
   double righttrig = 0;
@@ -90,6 +90,7 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
+    PortForwarder.add(5800, "photonvision.local", 5800);
     Compressor.enableDigital();
     Compressor.enabled();
     // We need to invert one side of the drivetrain so that positive voltages
@@ -108,6 +109,18 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
+    // Spin up the shooter for 3 seconds
+    if (m_timer.get() > 0 && m_timer.get() < 3) {
+      shooter.set(-0.6);
+      // Run the shooter and the thruput for 7 more seconds to flush out the ball
+    } else if (m_timer.get() > 3 && m_timer.get() < 10) {
+      shooter.set(-0.6);
+      thruPut.set(ControlMode.PercentOutput, .5);
+    } else {
+      // Stop the shooter and throughput
+      shooter.set(0);
+      thruPut.set(ControlMode.PercentOutput, 0);
+    }
   }
 
   /**
@@ -130,14 +143,14 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopPeriodic() {
-  //  double forwardSpeed;
-    //double rotationSpeed;
+    // double forwardSpeed;
+    // double rotationSpeed;
 
-  //  final double DeadZone = 0.05;
+    // final double DeadZone = 0.05;
 
-    double xs = joe.getLeftX() / 2;
-    double ys = joe.getLeftY() / 2;
-    double zr = joe.getRightX() / 2;
+    double xs = controller2.getLeftX();
+    double ys = controller2.getLeftY();
+    double zr = controller2.getRightX();
 
     // if(absl(xs)< DeadZone){
     // xs = 0.0;
@@ -146,81 +159,90 @@ public class Robot extends TimedRobot {
 
     // if(absl(zr)<DeadZone){zr=0.0;}
     /*
-    if (joe.getLeftStickButton()) {
-      var result = camera.getLatestResult();
+     * if (joe.getLeftStickButton()) {
+     * var result = camera.getLatestResult();
+     * 
+     * if (result.hasTargets()) {
+     * // First calculate range
+     * double range = PhotonUtils.calculateDistanceToTargetMeters(
+     * CAMERA_HEIGHT_METERS,
+     * TARGET_HEIGHT_METERS,
+     * CAMERA_PITCH_RADIANS,
+     * Units.degreesToRadians(result.getBestTarget().getPitch()));
+     * 
+     * // Use this range as the measurement we give to the PID controller.
+     * // -1.0 required to ensure positive PID controller effort _increases_ range
+     * forwardSpeed = -forwardController.calculate(range, GOAL_RANGE_METERS);
+     * 
+     * // Also calculate angular power
+     * // -1.0 required to ensure positive PID controller effort _increases_ yaw
+     * rotationSpeed = -turnController.calculate(result.getBestTarget().getYaw(),
+     * 0);
+     * } else {
+     * // If we have no targets, stay still.
+     * forwardSpeed = 0;
+     * rotationSpeed = 0;
+     * }
+     * m_drive.driveCartesian(-forwardSpeed, 0, rotationSpeed);
+     * } else {
+     * m_drive.driveCartesian(-ys, xs, zr);
+     * }
+     */
+    m_drive.driveCartesian(-xs, ys, -zr);
 
-      if (result.hasTargets()) {
-        // First calculate range
-        double range = PhotonUtils.calculateDistanceToTargetMeters(
-            CAMERA_HEIGHT_METERS,
-            TARGET_HEIGHT_METERS,
-            CAMERA_PITCH_RADIANS,
-            Units.degreesToRadians(result.getBestTarget().getPitch()));
-
-        // Use this range as the measurement we give to the PID controller.
-        // -1.0 required to ensure positive PID controller effort _increases_ range
-        forwardSpeed = -forwardController.calculate(range, GOAL_RANGE_METERS);
-
-        // Also calculate angular power
-        // -1.0 required to ensure positive PID controller effort _increases_ yaw
-        rotationSpeed = -turnController.calculate(result.getBestTarget().getYaw(), 0);
-      } else {
-        // If we have no targets, stay still.
-        forwardSpeed = 0;
-        rotationSpeed = 0;
-      }
-      m_drive.driveCartesian(-forwardSpeed, 0, rotationSpeed);
-    } else {
-      m_drive.driveCartesian(-ys, xs, zr);
-    } 
-    */
-    m_drive.driveCartesian(-xs, ys, zr);
-
+    // flmotor.set(xs + ys - zr);
+    // frmotor.set(xs - ys - zr);
+    // brmotor.set(-xs + ys + zr);
+    // blmotor.set(-xs -ys + zr);
     // m_drive.driveCartesian(ySpeed, xSpeed, zRotation);
 
-    leftrig = joe.getLeftTriggerAxis();
-    righttrig = joe.getRightTriggerAxis();
+    leftrig = controller2.getLeftTriggerAxis();
+    righttrig = controller2.getRightTriggerAxis();
 
     // thruPutLow.set(leftrig);
 
     // thruPutHi.set(-righttrig);
-    if(joe.getYButton()){
-      thruPut.set(ControlMode.PercentOutput,.5);
-    }
-    else{
+    if (joe.getRightBumper()) {
+      thruPut.set(ControlMode.PercentOutput, .5);
+    } else if (joe.getBButton()) {
+      thruPut.set(ControlMode.PercentOutput, -0.3);
+      intake.set(ControlMode.PercentOutput, -0.3);
+      intake2.set(ControlMode.PercentOutput, 0.3);
+    } else {
       thruPut.set(ControlMode.PercentOutput, 0);
     }
     if (joe.getAButton())
-      shooter.set(-1);
-    // if (joe.getYButton())
-    // shooter.set(-.80);
+      shooter.set(-0.6);
+    if (joe.getYButton())
+      shooter.set(-.5);
     if (joe.getXButton())
       shooter.set(0);
-    if (joe.getBButton()) {
+    if (joe.getLeftBumper()) {
       intake.set(ControlMode.PercentOutput, .5);
-      intake2.set(ControlMode.PercentOutput,-.5);
-    } else {
-      intake.set(ControlMode.PercentOutput, 0.0);
-      intake2.set(ControlMode.PercentOutput,0.0);
-    } 
-      if(controller2.getYButton()){
-        System.out.println("Going up");
-          upSolenoid.set(Value.kForward);
-        }
-      if(controller2.getAButton()){
-        System.out.println("Going down");
-        upSolenoid.set(Value.kReverse);
-      }
-    if(controller2.getXButton()){
-      System.out.println("side on");      
-        sideSolenoid.set(Value.kForward);
-      }
-    if(controller2.getBButton()){
+      intake2.set(ControlMode.PercentOutput, -.5);
+    } else if (!joe.getBButton()) {
+      intake.set(ControlMode.PercentOutput, 0);
+      intake2.set(ControlMode.PercentOutput, 0);
+    }
+
+    if (controller2.getYButton()) {
+      System.out.println("Going up");
+      upSolenoid.set(Value.kForward);
+    }
+    if (controller2.getAButton()) {
+      System.out.println("Going down");
+      upSolenoid.set(Value.kReverse);
+    }
+    if (controller2.getXButton()) {
+      System.out.println("side on");
+      sideSolenoid.set(Value.kForward);
+    }
+    if (controller2.getBButton()) {
       System.out.println("side off");
       sideSolenoid.set(Value.kReverse);
     }
 
-    intakeLift.set(ControlMode.PercentOutput, joe.getLeftTriggerAxis() - joe.getRightTriggerAxis());
+    intakeLift.set(ControlMode.PercentOutput, joe.getRightTriggerAxis() - joe.getLeftTriggerAxis());
   }
 
   /** This function is called once each time the robot enters test mode. */
