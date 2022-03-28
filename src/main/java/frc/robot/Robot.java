@@ -4,19 +4,17 @@
 
 package frc.robot;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableEntry;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.util.Units;
-//import edu.wpi.first.networktables.NetworkTableEntry;
-//import edu.wpi.first.wpilibj.AnalogInput;
-//import edu.wpi.first.wpilibj.AnalogPotentiometer;
 import edu.wpi.first.util.net.PortForwarder;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
-//import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
-//import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.PneumaticsModuleType;
@@ -28,10 +26,6 @@ import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
-//import static edu.wpi.first.wpilibj.DoubleSolenoid.value.*;
-//import org.photonvision.PhotonCamera;
-//import org.photonvision.PhotonUtils;
-
 /**
  * The VM is configured to automatically run this class, and to call the
  * functions corresponding to
@@ -64,24 +58,16 @@ public class Robot extends TimedRobot {
   private final Timer m_timer = new Timer();
   private MecanumDrive m_drive = new MecanumDrive(flmotor, blmotor, frmotor, brmotor);
 
-  // private PhotonCamera camera = new PhotonCamera("photonvision");
-
   double leftrig = 0;
   double righttrig = 0;
 
-  final double LINEAR_P = 0.1;
+  final double LINEAR_P = 0.01;
   final double LINEAR_D = 0.0;
   PIDController forwardController = new PIDController(LINEAR_P, 0, LINEAR_D);
 
-  final double ANGULAR_P = 0.1;
+  final double ANGULAR_P = 0.01;
   final double ANGULAR_D = 0.0;
   PIDController turnController = new PIDController(ANGULAR_P, 0, ANGULAR_D);
-
-  // TODO: measure this
-  final double CAMERA_HEIGHT_METERS = Units.inchesToMeters(24);
-  final double TARGET_HEIGHT_METERS = Units.inchesToMeters(114);
-  // Angle between horizontal and the camera.
-  final double CAMERA_PITCH_RADIANS = Units.degreesToRadians(0);
 
   /**
    * This function is run when the robot is first started up and should be used
@@ -93,11 +79,14 @@ public class Robot extends TimedRobot {
     PortForwarder.add(5800, "photonvision.local", 5800);
     Compressor.enableDigital();
     Compressor.enabled();
+    forwardController.setTolerance(5);
+    turnController.setTolerance(5);
     // We need to invert one side of the drivetrain so that positive voltages
     // result in both sides moving forward. Depending on how your robot's
     // gearbox is constructed, you might have to invert the left side instead.
 
   }
+
 
   /** This function is run once each time the robot enters autonomous mode. */
   @Override
@@ -109,18 +98,51 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
-    // Spin up the shooter for 3 seconds
-    if (m_timer.get() > 0 && m_timer.get() < 3) {
-      shooter.set(-0.6);
-      // Run the shooter and the thruput for 7 more seconds to flush out the ball
-    } else if (m_timer.get() > 3 && m_timer.get() < 10) {
-      shooter.set(-0.6);
-      thruPut.set(ControlMode.PercentOutput, .5);
-    } else {
-      // Stop the shooter and throughput
-      shooter.set(0);
-      thruPut.set(ControlMode.PercentOutput, 0);
+    NetworkTable table = NetworkTableInstance.getDefault().getTable("limelight");
+    NetworkTableEntry tx = table.getEntry("tx");
+    NetworkTableEntry ty = table.getEntry("ty");
+    NetworkTableEntry ta = table.getEntry("ta");
+    NetworkTableEntry tv = table.getEntry("tv");
+
+    // read values periodically
+    double x = tx.getDouble(0.0);
+    double y = ty.getDouble(0.0);
+    double area = ta.getDouble(0.0);
+    double targets = tv.getDouble(0);
+
+    // post to smart dashboard periodically
+    SmartDashboard.putNumber("LimelightX", x);
+    SmartDashboard.putNumber("LimelightY", y);
+    SmartDashboard.putNumber("LimelightArea", area);
+
+    double turnCalculation = turnController.calculate(x, 0);
+    double forwardCalculation = forwardController.calculate(area, 2);
+    System.out.println(targets);
+
+    if(targets == 0 || (turnController.atSetpoint() && forwardController.atSetpoint())){
+      forwardCalculation = 0;
+      turnCalculation = 0.2;
     }
+
+    System.out.println("turncalc: " +  turnCalculation);
+    System.out.println("forwardcalc: " +  forwardCalculation);
+
+
+    m_drive.driveCartesian(-forwardCalculation, 0, turnCalculation);
+    
+
+    // Spin up the shooter for 3 seconds
+    // if (m_timer.get() > 0 && m_timer.get() < 3) {
+    // shooter.set(-0.6);
+    // Run the shooter and the thruput for 7 more seconds to flush out the ball
+    // } else if (m_timer.get() > 3 && m_timer.get() < 10) {
+    // shooter.set(-0.6);
+    // thruPut.set(ControlMode.PercentOutput, .5);
+    // } else {
+    // Stop the shooter and throughput
+    // shooter.set(0);
+    // thruPut.set(ControlMode.PercentOutput, 0);
+    // }
   }
 
   /**
@@ -212,7 +234,7 @@ public class Robot extends TimedRobot {
       thruPut.set(ControlMode.PercentOutput, 0);
     }
     if (joe.getAButton())
-      shooter.set(-0.6);
+      shooter.set(-1);
     if (joe.getYButton())
       shooter.set(-.5);
     if (joe.getXButton())
