@@ -51,21 +51,23 @@ public class Robot extends TimedRobot {
   private CANSparkMax shooter = new CANSparkMax(4, MotorType.kBrushless);
   private VictorSPX intakeLift = new VictorSPX(10);
 
-  DoubleSolenoid upSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM, 2, 3);
+  DoubleSolenoid rightSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM, 2, 3);
+  DoubleSolenoid leftSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM,4,5);
   DoubleSolenoid sideSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM, 0, 1);
   private final XboxController joe = new XboxController(1);
   private final XboxController controller2 = new XboxController(0);
   private final Timer m_timer = new Timer();
   private MecanumDrive m_drive = new MecanumDrive(flmotor, blmotor, frmotor, brmotor);
+  private boolean lastXWasPositive = false;
 
   double leftrig = 0;
   double righttrig = 0;
 
-  final double LINEAR_P = 0.01;
+  final double LINEAR_P = 0.0;
   final double LINEAR_D = 0.0;
   PIDController forwardController = new PIDController(LINEAR_P, 0, LINEAR_D);
 
-  final double ANGULAR_P = 0.01;
+  final double ANGULAR_P = 0.03;
   final double ANGULAR_D = 0.0;
   PIDController turnController = new PIDController(ANGULAR_P, 0, ANGULAR_D);
 
@@ -79,8 +81,8 @@ public class Robot extends TimedRobot {
     PortForwarder.add(5800, "photonvision.local", 5800);
     Compressor.enableDigital();
     Compressor.enabled();
-    forwardController.setTolerance(5);
-    turnController.setTolerance(5);
+    forwardController.setTolerance(2.5);
+    turnController.setTolerance(2.5);
     // We need to invert one side of the drivetrain so that positive voltages
     // result in both sides moving forward. Depending on how your robot's
     // gearbox is constructed, you might have to invert the left side instead.
@@ -116,20 +118,52 @@ public class Robot extends TimedRobot {
     SmartDashboard.putNumber("LimelightArea", area);
 
     double turnCalculation = turnController.calculate(x, 0);
-    double forwardCalculation = forwardController.calculate(area, 2);
+    double forwardCalculation = forwardController.calculate(y, 0);
     System.out.println(targets);
 
     if(targets == 0 || (turnController.atSetpoint() && forwardController.atSetpoint())){
-      forwardCalculation = 0;
-      turnCalculation = 0.2;
+      forwardCalculation = 0.0;
+      turnCalculation = 0.0;
     }
 
-    System.out.println("turncalc: " +  turnCalculation);
-    System.out.println("forwardcalc: " +  forwardCalculation);
-
-
-    m_drive.driveCartesian(-forwardCalculation, 0, turnCalculation);
     
+
+    if(targets == 0){
+      //if(lastXWasPositive){
+        turnCalculation = 0.1;
+      //} else {
+      //  turnCalculation = -0.3;
+      //}
+    }
+
+    if(x > 0) {
+      lastXWasPositive = true;
+    } else {
+      lastXWasPositive = false;
+    }
+
+    System.out.println("turncalc: "  +  turnCalculation);
+    System.out.println("forwardcalc: " +  forwardCalculation);
+/*
+    double turn = 0;
+    double err = 1;
+    System.out.println("Current X: "+x);
+    System.out.println("current Area: "+area);
+    //double forward =0;
+    //check if drivetrain should turn
+    if(x>err){
+      turn =.10;
+    }
+    else if(x<-err){
+      turn = -.10;
+    }
+    else{
+      turn = 0.0;
+    }
+
+    m_drive.driveCartesian(turn, 0, 0);
+    */
+    m_drive.driveCartesian(-turnCalculation, forwardCalculation, 0);
 
     // Spin up the shooter for 3 seconds
     // if (m_timer.get() > 0 && m_timer.get() < 3) {
@@ -249,11 +283,13 @@ public class Robot extends TimedRobot {
 
     if (controller2.getYButton()) {
       System.out.println("Going up");
-      upSolenoid.set(Value.kForward);
+      rightSolenoid.set(Value.kForward);
+      leftSolenoid.set(Value.kForward);
     }
     if (controller2.getAButton()) {
       System.out.println("Going down");
-      upSolenoid.set(Value.kReverse);
+      rightSolenoid.set(Value.kReverse);
+      leftSolenoid.set(Value.kReverse);
     }
     if (controller2.getXButton()) {
       System.out.println("side on");
