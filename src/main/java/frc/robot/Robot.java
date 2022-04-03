@@ -24,6 +24,7 @@ import com.ctre.phoenix.motorcontrol.can.VictorSPX;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 
 import com.revrobotics.CANSparkMax;
+import com.revrobotics.SparkMaxPIDController;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 /**
@@ -45,10 +46,13 @@ public class Robot extends TimedRobot {
   private CANSparkMax blmotor = new CANSparkMax(5, MotorType.kBrushless);
   private CANSparkMax frmotor = new CANSparkMax(2, MotorType.kBrushless);
   private CANSparkMax flmotor = new CANSparkMax(1, MotorType.kBrushless);
+  private CANSparkMax Launcher1 = new CANSparkMax(11, MotorType.kBrushless);
+  private CANSparkMax Launcher2 = new CANSparkMax(12, MotorType.kBrushless);
+
   private VictorSPX intake = new VictorSPX(6);
   private TalonSRX intake2 = new TalonSRX(8);
   private VictorSPX thruPut = new VictorSPX(9);
-  private CANSparkMax shooter = new CANSparkMax(4, MotorType.kBrushless);
+  private CANSparkMax thruPutFlywheel = new CANSparkMax(4, MotorType.kBrushless);
   private VictorSPX intakeLift = new VictorSPX(10);
 
   DoubleSolenoid rightSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM, 2, 3);
@@ -63,13 +67,11 @@ public class Robot extends TimedRobot {
   double leftrig = 0;
   double righttrig = 0;
 
-  final double LINEAR_P = 0.0;
-  final double LINEAR_D = 0.0;
-  PIDController forwardController = new PIDController(LINEAR_P, 0, LINEAR_D);
+  double min_command = 0.1;
 
-  final double ANGULAR_P = 0.03;
-  final double ANGULAR_D = 0.0;
-  PIDController turnController = new PIDController(ANGULAR_P, 0, ANGULAR_D);
+  private SparkMaxPIDController launcher1PidController;
+
+  private SparkMaxPIDController launcher2PidController;
 
   /**
    * This function is run when the robot is first started up and should be used
@@ -81,8 +83,26 @@ public class Robot extends TimedRobot {
     PortForwarder.add(5800, "photonvision.local", 5800);
     Compressor.enableDigital();
     Compressor.enabled();
-    forwardController.setTolerance(2.5);
-    turnController.setTolerance(2.5);
+
+    launcher1PidController = Launcher1.getPIDController();
+    launcher2PidController = Launcher2.getPIDController();
+
+    launcher1PidController.setP(6e-4);
+    launcher1PidController.setI(0);
+    launcher1PidController.setD(0);
+    launcher1PidController.setIZone(0);
+    launcher1PidController.setFF(0.000015);
+    launcher1PidController.setOutputRange(-1, 1);
+
+    launcher2PidController.setP(6e-4);
+    launcher2PidController.setI(0);
+    launcher2PidController.setD(0);
+    launcher2PidController.setIZone(0);
+    launcher2PidController.setFF(0.000015);
+    launcher2PidController.setOutputRange(-1, 1);
+    
+    //forwardController.setTolerance(2.5);
+    //turnController.setTolerance(2.5);
     // We need to invert one side of the drivetrain so that positive voltages
     // result in both sides moving forward. Depending on how your robot's
     // gearbox is constructed, you might have to invert the left side instead.
@@ -111,6 +131,10 @@ public class Robot extends TimedRobot {
     double y = ty.getDouble(0.0);
     double area = ta.getDouble(0.0);
     double targets = tv.getDouble(0);
+
+    limelightTarget(x, y, targets);
+
+    /*
 
     // post to smart dashboard periodically
     SmartDashboard.putNumber("LimelightX", x);
@@ -143,7 +167,7 @@ public class Robot extends TimedRobot {
     }
 
     System.out.println("turncalc: "  +  turnCalculation);
-    System.out.println("forwardcalc: " +  forwardCalculation);
+    System.out.println("forwardcalc: " +  forwardCalculation); */
 /*
     double turn = 0;
     double err = 1;
@@ -163,7 +187,7 @@ public class Robot extends TimedRobot {
 
     m_drive.driveCartesian(turn, 0, 0);
     */
-    m_drive.driveCartesian(-turnCalculation, forwardCalculation, 0);
+    //m_drive.driveCartesian(-turnCalculation, forwardCalculation, 0);
 
     // Spin up the shooter for 3 seconds
     // if (m_timer.get() > 0 && m_timer.get() < 3) {
@@ -184,7 +208,7 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void teleopInit() {
-    shooter.setIdleMode(IdleMode.kBrake);
+    thruPutFlywheel.setIdleMode(IdleMode.kBrake);
   }
 
   /** This function is called periodically during teleoperated mode. */
@@ -199,6 +223,17 @@ public class Robot extends TimedRobot {
 
   @Override
   public void teleopPeriodic() {
+    NetworkTable table = NetworkTableInstance.getDefault().getTable("limelight");
+    NetworkTableEntry tx = table.getEntry("tx");
+    NetworkTableEntry ty = table.getEntry("ty");
+    NetworkTableEntry ta = table.getEntry("ta");
+    NetworkTableEntry tv = table.getEntry("tv");
+
+    // read values periodically
+    double x = tx.getDouble(0.0);
+    double y = ty.getDouble(0.0);
+    double area = ta.getDouble(0.0);
+    double targets = tv.getDouble(0);
     // double forwardSpeed;
     // double rotationSpeed;
 
@@ -244,7 +279,8 @@ public class Robot extends TimedRobot {
      * m_drive.driveCartesian(-ys, xs, zr);
      * }
      */
-    m_drive.driveCartesian(-xs, ys, -zr);
+    if(!joe.getLeftBumper())m_drive.driveCartesian(-xs, ys, -zr);
+    if(joe.getLeftBumper()) limelightTarget(x, y, targets);
 
     // flmotor.set(xs + ys - zr);
     // frmotor.set(xs - ys - zr);
@@ -267,12 +303,28 @@ public class Robot extends TimedRobot {
     } else {
       thruPut.set(ControlMode.PercentOutput, 0);
     }
-    if (joe.getAButton())
-      shooter.set(-1);
-    if (joe.getYButton())
-      shooter.set(-.5);
-    if (joe.getXButton())
-      shooter.set(0);
+    if (joe.getAButton()){
+      thruPutFlywheel.set(-.60);
+      
+      launcher1PidController.setReference(-4.5, CANSparkMax.ControlType.kVoltage);
+      launcher2PidController.setReference(4.5, CANSparkMax.ControlType.kVoltage);
+      
+     // Launcher1.set(-.5);
+    //  Launcher2.set(.5);
+    }
+
+    if (joe.getYButton()){
+      thruPutFlywheel.set(-.2);
+      Launcher1.set(-.3);
+      Launcher2.set(.3);
+    }
+
+    if (joe.getXButton()){
+      thruPutFlywheel.set(0);
+      Launcher1.set(0);
+      Launcher2.set(0);
+    }
+
     if (joe.getLeftBumper()) {
       intake.set(ControlMode.PercentOutput, .5);
       intake2.set(ControlMode.PercentOutput, -.5);
@@ -312,9 +364,76 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during test mode. */
   @Override
   public void testPeriodic() {
-    m_drive.driveCartesian(.5, 0, 0);
+    //Launcher1.set(.5);
+    //Launcher2.set(-.5);
+    //brmotor.set(.1);
+    //brmotor.set(.5);
+    thruPutFlywheel.set(-.3);
+    Launcher1.set(1);
+    Launcher2.set(-1);
+    //m_drive.driveCartesian(.5, 0, 0);
     // yeet.set(ControlMode.PercentOutput,
     // joe.getLeftTriggerAxis()-joe.getRightTriggerAxis());
 
+  }
+
+  public boolean limelightTarget(double x, double y, double targets) {
+    if (targets == 0) return true;
+    double xHeading_error = -x;
+    double yHeading_error = -y;
+    double x_adjust = 0.0f;
+    double y_adjust = 0.0f;
+    double left_command = 0;
+    double right_command = 0;
+    double forward_command = 0;
+    double backward_command = 0;
+    double Kp = 0.1;
+
+    if (x > 1.0)
+    {
+            x_adjust = Kp*xHeading_error - min_command;
+    }
+    else if (x < 1.0)
+    {
+            x_adjust = Kp*xHeading_error + min_command;
+    }
+    left_command += x_adjust;
+    right_command -= x_adjust;
+
+    if (y > 1.0)
+    {
+      y_adjust = Kp*yHeading_error - min_command;
+    }
+    else if (y < 1.0)
+    {
+      y_adjust = Kp*yHeading_error + min_command;
+    }
+    forward_command += y_adjust;
+    backward_command -= y_adjust;
+
+    m_drive.driveCartesian(y_adjust, x_adjust, 0.0);
+
+    if (y_adjust == 0.0f && x_adjust == 0.0f) return true;
+  
+    return false;
+
+    /*
+    In terms of rotation, if the tape were to be viewed from an angle 
+    that is not facing the hub, The area of the tape (grouped together)
+    would be larger. The first step to implementing this would be to
+    first change the limelight settings to group the reflective tape
+    marks on the Hub together (check main Limelight website FAQ for
+    how to do that), and find what the area of the tape is when at
+    an ideal angle. The only thing would be figuring out which way to
+    rotate, which makes me think the whole thing may be a waste of time.
+    I don't think it'll be a problem? Not sure. Grasping at straws here.
+    */
+
+    //https://docs.limelightvision.io/en/latest/cs_estimating_distance.html
+    /*
+    Work with Wyatt to find a suitable fixed angle for the robot, find the height
+    from the floor, and plug in the variables accordingly. This system will
+    be much better than calculating based on area.
+    */
   }
 }
