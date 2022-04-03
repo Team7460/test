@@ -14,7 +14,9 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
+import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
+import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.PneumaticsModuleType;
@@ -61,7 +63,9 @@ public class Robot extends TimedRobot {
   private final XboxController joe = new XboxController(1);
   private final XboxController controller2 = new XboxController(0);
   private final Timer m_timer = new Timer();
-  private MecanumDrive m_drive = new MecanumDrive(flmotor, blmotor, frmotor, brmotor);
+  MotorControllerGroup leftSide = new MotorControllerGroup(flmotor,blmotor);
+  MotorControllerGroup rightSide = new MotorControllerGroup(frmotor, brmotor);
+  private DifferentialDrive m_drive = new DifferentialDrive(leftSide, rightSide);
   private boolean lastXWasPositive = false;
 
   double leftrig = 0;
@@ -279,7 +283,7 @@ public class Robot extends TimedRobot {
      * m_drive.driveCartesian(-ys, xs, zr);
      * }
      */
-    if(!joe.getLeftBumper())m_drive.driveCartesian(-xs, ys, -zr);
+    if(!joe.getLeftBumper())m_drive.tankDrive(joe.getLeftY(),joe.getRightY());
     if(joe.getLeftBumper()) limelightTarget(x, y, targets);
 
     // flmotor.set(xs + ys - zr);
@@ -411,7 +415,7 @@ public class Robot extends TimedRobot {
     forward_command += y_adjust;
     backward_command -= y_adjust;
 
-    m_drive.driveCartesian(y_adjust, x_adjust, 0.0);
+    m_drive.arcadeDrive(x_adjust,y_adjust);
 
     if (y_adjust == 0.0f && x_adjust == 0.0f) return true;
   
