@@ -336,6 +336,15 @@ public class Robot extends TimedRobot {
       // Launcher2.set(.5);
     }
 
+    if(joe.getBButton()){
+      thruPut.set(ControlMode.PercentOutput, -.3);
+      hardStopSolenoid.set(Value.kReverse);
+    }
+    else{
+      thruPut.set(ControlMode.PercentOutput, 0);
+      hardStopSolenoid.set(Value.kForward);
+    }
+
     if (joe.getYButton()) {
       thruPutFlywheel.set(-.2);
       Launcher1.set(-.3);
