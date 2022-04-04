@@ -71,6 +71,7 @@ public class Robot extends TimedRobot {
   double righttrig = 0;
 
   double min_command = 0.075;
+  private static final double Kp = 0.01;
 
   private SparkMaxPIDController launcher1PidController;
 
@@ -85,7 +86,6 @@ public class Robot extends TimedRobot {
   public void robotInit() {
     PortForwarder.add(5800, "photonvision.local", 5800);
     NetworkTableInstance.getDefault().getTable("limelight").getEntry("pipeline").setNumber(1);
-    
 
     Compressor.enableDigital();
     Compressor.enabled();
@@ -140,7 +140,7 @@ public class Robot extends TimedRobot {
 
     limelightTarget(x, y, targets);
 
-    if(Math.abs(Launcher1.get()) > 0.1){
+    if (Math.abs(Launcher1.get()) > 0.1) {
       hardStopSolenoid.set(Value.kReverse);
     } else {
       hardStopSolenoid.set(Value.kForward);
@@ -331,7 +331,6 @@ public class Robot extends TimedRobot {
       launcher2PidController.setReference(4.5, CANSparkMax.ControlType.kVoltage);
       hardStopSolenoid.set(Value.kReverse);
 
-
       // Launcher1.set(-.5);
       // Launcher2.set(.5);
     }
@@ -417,55 +416,13 @@ public class Robot extends TimedRobot {
   public boolean limelightTarget(double x, double y, double targets) {
     if (targets == 0)
       return true;
-    double xHeading_error = -x;
-    double yHeading_error = -y;
-    double x_adjust = 0.0f;
-    double y_adjust = 0.0f;
-    double Kp = 0.0001;
 
-    if (x > 1.5) {
-      x_adjust = Kp * xHeading_error - min_command;
-    } else if (x < -1.5) {
-      x_adjust = Kp * xHeading_error + min_command;
-    }
+    double x_error = -x;
 
-    //if (y > 3) {
-      //y_adjust = Kp * yHeading_error - min_command;
-    //} else if (y < -3) {
-      //y_adjust = Kp * yHeading_error + min_command;
-    //}
-
-    System.out.println("x_error: " + xHeading_error);
-    System.out.println("y_error: " + yHeading_error);
-    System.out.println("x_adjust: " + x_adjust);
-    System.out.println("y_adjust: " + y_adjust);
-
-
-    m_drive.driveCartesian(0, 0, x_adjust);
-    //m_drive.driveCartesian(0,0, 0.0);
-
-    if (y_adjust == 0.0f && x_adjust == 0.0f)
+    if (Math.abs(x_error) < 3)
       return true;
 
+    m_drive.driveCartesian(0, 0, x_error * Kp);
     return false;
-
-    /*
-     * In terms of rotation, if the tape were to be viewed from an angle
-     * that is not facing the hub, The area of the tape (grouped together)
-     * would be larger. The first step to implementing this would be to
-     * first change the limelight settings to group the reflective tape
-     * marks on the Hub together (check main Limelight website FAQ for
-     * how to do that), and find what the area of the tape is when at
-     * an ideal angle. The only thing would be figuring out which way to
-     * rotate, which makes me think the whole thing may be a waste of time.
-     * I don't think it'll be a problem? Not sure. Grasping at straws here.
-     */
-
-    // https://docs.limelightvision.io/en/latest/cs_estimating_distance.html
-    /*
-     * Work with Wyatt to find a suitable fixed angle for the robot, find the height
-     * from the floor, and plug in the variables accordingly. This system will
-     * be much better than calculating based on area.
-     */
   }
 }
