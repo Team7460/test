@@ -27,6 +27,7 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.SparkMaxPIDController;
 import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
+
 /**
  * The VM is configured to automatically run this class, and to call the
  * functions corresponding to
@@ -56,8 +57,10 @@ public class Robot extends TimedRobot {
   private VictorSPX intakeLift = new VictorSPX(10);
 
   DoubleSolenoid rightSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM, 2, 3);
-  DoubleSolenoid leftSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM,4,5);
+  DoubleSolenoid leftSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM, 4, 5);
   DoubleSolenoid sideSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM, 0, 1);
+  DoubleSolenoid hardStopSolenoid = new DoubleSolenoid(PneumaticsModuleType.CTREPCM, 6, 7);
+
   private final XboxController joe = new XboxController(1);
   private final XboxController controller2 = new XboxController(0);
   private final Timer m_timer = new Timer();
@@ -67,7 +70,7 @@ public class Robot extends TimedRobot {
   double leftrig = 0;
   double righttrig = 0;
 
-  double min_command = 0.1;
+  double min_command = 0.075;
 
   private SparkMaxPIDController launcher1PidController;
 
@@ -81,6 +84,9 @@ public class Robot extends TimedRobot {
   @Override
   public void robotInit() {
     PortForwarder.add(5800, "photonvision.local", 5800);
+    NetworkTableInstance.getDefault().getTable("limelight").getEntry("pipeline").setNumber(1);
+    
+
     Compressor.enableDigital();
     Compressor.enabled();
 
@@ -100,15 +106,14 @@ public class Robot extends TimedRobot {
     launcher2PidController.setIZone(0);
     launcher2PidController.setFF(0.000015);
     launcher2PidController.setOutputRange(-1, 1);
-    
-    //forwardController.setTolerance(2.5);
-    //turnController.setTolerance(2.5);
+
+    // forwardController.setTolerance(2.5);
+    // turnController.setTolerance(2.5);
     // We need to invert one side of the drivetrain so that positive voltages
     // result in both sides moving forward. Depending on how your robot's
     // gearbox is constructed, you might have to invert the left side instead.
 
   }
-
 
   /** This function is run once each time the robot enters autonomous mode. */
   @Override
@@ -131,63 +136,72 @@ public class Robot extends TimedRobot {
     double y = ty.getDouble(0.0);
     double area = ta.getDouble(0.0);
     double targets = tv.getDouble(0);
+    NetworkTableInstance.getDefault().getTable("limelight").getEntry("pipeline").setNumber(0);
 
     limelightTarget(x, y, targets);
 
-    /*
-
-    // post to smart dashboard periodically
-    SmartDashboard.putNumber("LimelightX", x);
-    SmartDashboard.putNumber("LimelightY", y);
-    SmartDashboard.putNumber("LimelightArea", area);
-
-    double turnCalculation = turnController.calculate(x, 0);
-    double forwardCalculation = forwardController.calculate(y, 0);
-    System.out.println(targets);
-
-    if(targets == 0 || (turnController.atSetpoint() && forwardController.atSetpoint())){
-      forwardCalculation = 0.0;
-      turnCalculation = 0.0;
-    }
-
-    
-
-    if(targets == 0){
-      //if(lastXWasPositive){
-        turnCalculation = 0.1;
-      //} else {
-      //  turnCalculation = -0.3;
-      //}
-    }
-
-    if(x > 0) {
-      lastXWasPositive = true;
+    if(Math.abs(Launcher1.get()) > 0.1){
+      hardStopSolenoid.set(Value.kReverse);
     } else {
-      lastXWasPositive = false;
+      hardStopSolenoid.set(Value.kForward);
     }
 
-    System.out.println("turncalc: "  +  turnCalculation);
-    System.out.println("forwardcalc: " +  forwardCalculation); */
-/*
-    double turn = 0;
-    double err = 1;
-    System.out.println("Current X: "+x);
-    System.out.println("current Area: "+area);
-    //double forward =0;
-    //check if drivetrain should turn
-    if(x>err){
-      turn =.10;
-    }
-    else if(x<-err){
-      turn = -.10;
-    }
-    else{
-      turn = 0.0;
-    }
-
-    m_drive.driveCartesian(turn, 0, 0);
-    */
-    //m_drive.driveCartesian(-turnCalculation, forwardCalculation, 0);
+    /*
+     * 
+     * // post to smart dashboard periodically
+     * SmartDashboard.putNumber("LimelightX", x);
+     * SmartDashboard.putNumber("LimelightY", y);
+     * SmartDashboard.putNumber("LimelightArea", area);
+     * 
+     * double turnCalculation = turnController.calculate(x, 0);
+     * double forwardCalculation = forwardController.calculate(y, 0);
+     * System.out.println(targets);
+     * 
+     * if(targets == 0 || (turnController.atSetpoint() &&
+     * forwardController.atSetpoint())){
+     * forwardCalculation = 0.0;
+     * turnCalculation = 0.0;
+     * }
+     * 
+     * 
+     * 
+     * if(targets == 0){
+     * //if(lastXWasPositive){
+     * turnCalculation = 0.1;
+     * //} else {
+     * // turnCalculation = -0.3;
+     * //}
+     * }
+     * 
+     * if(x > 0) {
+     * lastXWasPositive = true;
+     * } else {
+     * lastXWasPositive = false;
+     * }
+     * 
+     * System.out.println("turncalc: " + turnCalculation);
+     * System.out.println("forwardcalc: " + forwardCalculation);
+     */
+    /*
+     * double turn = 0;
+     * double err = 1;
+     * System.out.println("Current X: "+x);
+     * System.out.println("current Area: "+area);
+     * //double forward =0;
+     * //check if drivetrain should turn
+     * if(x>err){
+     * turn =.10;
+     * }
+     * else if(x<-err){
+     * turn = -.10;
+     * }
+     * else{
+     * turn = 0.0;
+     * }
+     * 
+     * m_drive.driveCartesian(turn, 0, 0);
+     */
+    // m_drive.driveCartesian(-turnCalculation, forwardCalculation, 0);
 
     // Spin up the shooter for 3 seconds
     // if (m_timer.get() > 0 && m_timer.get() < 3) {
@@ -209,6 +223,8 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopInit() {
     thruPutFlywheel.setIdleMode(IdleMode.kBrake);
+    hardStopSolenoid.set(Value.kForward);
+
   }
 
   /** This function is called periodically during teleoperated mode. */
@@ -279,8 +295,13 @@ public class Robot extends TimedRobot {
      * m_drive.driveCartesian(-ys, xs, zr);
      * }
      */
-    if(!joe.getLeftBumper())m_drive.driveCartesian(-xs, ys, -zr);
-    if(joe.getLeftBumper()) limelightTarget(x, y, targets);
+    if (controller2.getLeftBumper()) {
+      NetworkTableInstance.getDefault().getTable("limelight").getEntry("pipeline").setNumber(0);
+      limelightTarget(x, y, targets);
+    } else {
+      NetworkTableInstance.getDefault().getTable("limelight").getEntry("pipeline").setNumber(1);
+      m_drive.driveCartesian(-xs, ys, -zr);
+    }
 
     // flmotor.set(xs + ys - zr);
     // frmotor.set(xs - ys - zr);
@@ -303,23 +324,29 @@ public class Robot extends TimedRobot {
     } else {
       thruPut.set(ControlMode.PercentOutput, 0);
     }
-    if (joe.getAButton()){
+    if (joe.getAButton()) {
       thruPutFlywheel.set(-.60);
-      
+
       launcher1PidController.setReference(-4.5, CANSparkMax.ControlType.kVoltage);
       launcher2PidController.setReference(4.5, CANSparkMax.ControlType.kVoltage);
-      
-     // Launcher1.set(-.5);
-    //  Launcher2.set(.5);
+      hardStopSolenoid.set(Value.kReverse);
+
+
+      // Launcher1.set(-.5);
+      // Launcher2.set(.5);
     }
 
-    if (joe.getYButton()){
+    if (joe.getYButton()) {
       thruPutFlywheel.set(-.2);
       Launcher1.set(-.3);
       Launcher2.set(.3);
+      hardStopSolenoid.set(Value.kReverse);
+
     }
 
-    if (joe.getXButton()){
+    if (joe.getXButton()) {
+      hardStopSolenoid.set(Value.kForward);
+
       thruPutFlywheel.set(0);
       Launcher1.set(0);
       Launcher2.set(0);
@@ -353,6 +380,7 @@ public class Robot extends TimedRobot {
     }
 
     intakeLift.set(ControlMode.PercentOutput, joe.getRightTriggerAxis() - joe.getLeftTriggerAxis());
+
   }
 
   /** This function is called once each time the robot enters test mode. */
@@ -364,76 +392,71 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during test mode. */
   @Override
   public void testPeriodic() {
-    //Launcher1.set(.5);
-    //Launcher2.set(-.5);
-    //brmotor.set(.1);
-    //brmotor.set(.5);
+    // Launcher1.set(.5);
+    // Launcher2.set(-.5);
+    // brmotor.set(.1);
+    // brmotor.set(.5);
     thruPutFlywheel.set(-.3);
     Launcher1.set(1);
     Launcher2.set(-1);
-    //m_drive.driveCartesian(.5, 0, 0);
+    // m_drive.driveCartesian(.5, 0, 0);
     // yeet.set(ControlMode.PercentOutput,
     // joe.getLeftTriggerAxis()-joe.getRightTriggerAxis());
 
   }
 
   public boolean limelightTarget(double x, double y, double targets) {
-    if (targets == 0) return true;
+    if (targets == 0)
+      return true;
     double xHeading_error = -x;
     double yHeading_error = -y;
     double x_adjust = 0.0f;
     double y_adjust = 0.0f;
-    double left_command = 0;
-    double right_command = 0;
-    double forward_command = 0;
-    double backward_command = 0;
-    double Kp = 0.1;
+    double Kp = 0.0001;
 
-    if (x > 1.0)
-    {
-            x_adjust = Kp*xHeading_error - min_command;
+    if (x > 1.5) {
+      x_adjust = Kp * xHeading_error - min_command;
+    } else if (x < -1.5) {
+      x_adjust = Kp * xHeading_error + min_command;
     }
-    else if (x < 1.0)
-    {
-            x_adjust = Kp*xHeading_error + min_command;
-    }
-    left_command += x_adjust;
-    right_command -= x_adjust;
 
-    if (y > 1.0)
-    {
-      y_adjust = Kp*yHeading_error - min_command;
-    }
-    else if (y < 1.0)
-    {
-      y_adjust = Kp*yHeading_error + min_command;
-    }
-    forward_command += y_adjust;
-    backward_command -= y_adjust;
+    //if (y > 3) {
+      //y_adjust = Kp * yHeading_error - min_command;
+    //} else if (y < -3) {
+      //y_adjust = Kp * yHeading_error + min_command;
+    //}
 
-    m_drive.driveCartesian(y_adjust, x_adjust, 0.0);
+    System.out.println("x_error: " + xHeading_error);
+    System.out.println("y_error: " + yHeading_error);
+    System.out.println("x_adjust: " + x_adjust);
+    System.out.println("y_adjust: " + y_adjust);
 
-    if (y_adjust == 0.0f && x_adjust == 0.0f) return true;
-  
+
+    m_drive.driveCartesian(0, 0, x_adjust);
+    //m_drive.driveCartesian(0,0, 0.0);
+
+    if (y_adjust == 0.0f && x_adjust == 0.0f)
+      return true;
+
     return false;
 
     /*
-    In terms of rotation, if the tape were to be viewed from an angle 
-    that is not facing the hub, The area of the tape (grouped together)
-    would be larger. The first step to implementing this would be to
-    first change the limelight settings to group the reflective tape
-    marks on the Hub together (check main Limelight website FAQ for
-    how to do that), and find what the area of the tape is when at
-    an ideal angle. The only thing would be figuring out which way to
-    rotate, which makes me think the whole thing may be a waste of time.
-    I don't think it'll be a problem? Not sure. Grasping at straws here.
-    */
+     * In terms of rotation, if the tape were to be viewed from an angle
+     * that is not facing the hub, The area of the tape (grouped together)
+     * would be larger. The first step to implementing this would be to
+     * first change the limelight settings to group the reflective tape
+     * marks on the Hub together (check main Limelight website FAQ for
+     * how to do that), and find what the area of the tape is when at
+     * an ideal angle. The only thing would be figuring out which way to
+     * rotate, which makes me think the whole thing may be a waste of time.
+     * I don't think it'll be a problem? Not sure. Grasping at straws here.
+     */
 
-    //https://docs.limelightvision.io/en/latest/cs_estimating_distance.html
+    // https://docs.limelightvision.io/en/latest/cs_estimating_distance.html
     /*
-    Work with Wyatt to find a suitable fixed angle for the robot, find the height
-    from the floor, and plug in the variables accordingly. This system will
-    be much better than calculating based on area.
-    */
+     * Work with Wyatt to find a suitable fixed angle for the robot, find the height
+     * from the floor, and plug in the variables accordingly. This system will
+     * be much better than calculating based on area.
+     */
   }
 }
