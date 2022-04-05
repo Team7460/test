@@ -317,7 +317,7 @@ public class Robot extends TimedRobot {
     // thruPutHi.set(-righttrig);
     if (joe.getRightBumper()) {
       thruPut.set(ControlMode.PercentOutput, .5);
-    } else if (joe.getBButton()) {
+    } else if (joe.getPOV() == 180) {
       thruPut.set(ControlMode.PercentOutput, -0.3);
       intake.set(ControlMode.PercentOutput, -0.3);
       intake2.set(ControlMode.PercentOutput, 0.3);
