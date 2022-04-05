@@ -71,7 +71,7 @@ public class Robot extends TimedRobot {
   double righttrig = 0;
 
   double min_command = 0.075;
-  private static final double Kp = 0.01;
+  private static final double Kp = 0.05;
 
   private SparkMaxPIDController launcher1PidController;
 
@@ -140,7 +140,7 @@ public class Robot extends TimedRobot {
 
     limelightTarget(x, y, targets);
 
-    if (Math.abs(Launcher1.get()) > 0.1) {
+    if (Math.abs(Launcher1.getEncoder().getVelocity()) > 1000) {
       hardStopSolenoid.set(Value.kReverse);
     } else {
       hardStopSolenoid.set(Value.kForward);
@@ -410,7 +410,7 @@ public class Robot extends TimedRobot {
 
     double x_error = -x;
 
-    if (Math.abs(x_error) < 3)
+    if (Math.abs(x_error) < 1)
       return true;
 
     m_drive.driveCartesian(0, 0, x_error * Kp);
